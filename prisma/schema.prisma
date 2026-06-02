@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model State {
+  id             String         @id @default(uuid())
+  name           String         @unique
+  elections      Election[]
+  constituencies Constituency[]
+  candidates     Candidate[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Election {
+  id             String         @id @default(uuid())
+  year           Int
+  stateId        String
+  state          State          @relation(fields: [stateId], references: [id])
+  candidates     Candidate[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Constituency {
+  id             String         @id @default(uuid())
+  name           String
+  stateId        String
+  state          State          @relation(fields: [stateId], references: [id])
+  candidates     Candidate[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Candidate {
+  id                 String       @id @default(uuid())
+  name               String
+  stateId            String
+  state              State        @relation(fields: [stateId], references: [id])
+  constituencyId     String
+  constituency       Constituency @relation(fields: [constituencyId], references: [id])
+  electionId         String
+  election           Election     @relation(fields: [electionId], references: [id])
+  
+  party              String
+  winner             Boolean      @default(false)
+  type               String       @default("MLA")
+  gender             String?
+  age                Int?
+  education          String?
+  profession         String?
+  
+  totalAssets        Float?
+  totalLiabilities   Float?
+  criminalCasesCount Int          @default(0)
+  seriousCasesCount  Int          @default(0)
+  
+  panStatus          String?
+  address            String?
+
+  fatherName         String?
+  motherName         String?
+  spouseName         String?
+  childrenInfo       String?
+  email              String?
+  mobileNumber       String?
+
+  assets             Assets?
+  liabilities        Liabilities?
+  criminalCases      CriminalCase[]
+  affidavit          Affidavit?
+
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+}
+
+model Assets {
+  id                  String    @id @default(uuid())
+  candidateId         String    @unique
+  candidate           Candidate @relation(fields: [candidateId], references: [id])
+  movableAssets       Float     @default(0)
+  immovableAssets     Float     @default(0)
+  cash                Float     @default(0)
+  bankDeposits        Float     @default(0)
+  vehicles            String?
+  jewellery           Float     @default(0)
+  agriculturalLand    Float     @default(0)
+  commercialBuildings Float     @default(0)
+}
+
+model Liabilities {
+  id                 String    @id @default(uuid())
+  candidateId        String    @unique
+  candidate          Candidate @relation(fields: [candidateId], references: [id])
+  bankLoans          Float     @default(0)
+  governmentDues     Float     @default(0)
+  taxDues            Float     @default(0)
+  otherLiabilities   Float     @default(0)
+}
+
+model CriminalCase {
+  id                 String    @id @default(uuid())
+  candidateId        String
+  candidate          Candidate @relation(fields: [candidateId], references: [id])
+  serious            Boolean   @default(false)
+  ipcSections        String?
+  courtInfo          String?
+  description        String?
+}
+
+model Affidavit {
+  id                 String    @id @default(uuid())
+  candidateId        String    @unique
+  candidate          Candidate @relation(fields: [candidateId], references: [id])
+  pdfUrl             String?
+  localFilePath      String?
+}
