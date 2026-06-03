@@ -66,7 +66,8 @@ const STATE_SEAT_CAPACITY: Record<string, { ls: number, rs: number, assembly: nu
   "Chandigarh": { ls: 1, rs: 0, assembly: 0 },
   "Dadra and Nagar Haveli and Daman and Diu": { ls: 2, rs: 0, assembly: 0 },
   "Lakshadweep": { ls: 1, rs: 0, assembly: 0 },
-  "Ladakh": { ls: 1, rs: 0, assembly: 0 }
+  "Ladakh": { ls: 1, rs: 0, assembly: 0 },
+  "Nominated (President)": { ls: 0, rs: 12, assembly: 0 }
 };
 
 export function StateAnalyticsPage() {

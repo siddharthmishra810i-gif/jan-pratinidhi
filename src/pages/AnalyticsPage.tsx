@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { MainLayout } from "../components/layout/MainLayout";
 import { GlassChartContainer } from "../components/ui/GlassChartContainer";
-import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis, BarChart, Bar } from "recharts";
+import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis, BarChart, Bar, ComposedChart, Line, Legend } from "recharts";
 import { motion } from "motion/react";
 import { fadeUp } from "../lib/animations";
 import { representativesData } from "../data/representatives";
@@ -13,6 +13,15 @@ const FUND_UTILIZATION_DATA = [
   { year: '2022', allotted: 5, utilized: 4.8 },
   { year: '2023', allotted: 5, utilized: 4.5 },
   { year: '2024', allotted: 5, utilized: 2.1 }, // Ongoing
+];
+
+const REGIONAL_PERFORMANCE_DATA = [
+  { region: 'North', funding: 85, performance: 78, attendance: 82 },
+  { region: 'South', funding: 92, performance: 88, attendance: 85 },
+  { region: 'East', funding: 76, performance: 72, attendance: 70 },
+  { region: 'West', funding: 89, performance: 85, attendance: 83 },
+  { region: 'Central', funding: 81, performance: 75, attendance: 78 },
+  { region: 'Northeast', funding: 74, performance: 70, attendance: 68 }
 ];
 
 const GENDER_RATIO_DATA = [
@@ -137,6 +146,26 @@ export function AnalyticsPage() {
                 />
                 <Bar dataKey="count" fill="#ffffff" radius={[4, 4, 0, 0]} maxBarSize={60} />
               </BarChart>
+            </ResponsiveContainer>
+          </GlassChartContainer>
+        </div>
+
+        <div className="grid grid-cols-1 gap-8 mt-8">
+           <GlassChartContainer title="Regional Performance & Funding Trends">
+            <ResponsiveContainer width="100%" height={350}>
+              <ComposedChart data={REGIONAL_PERFORMANCE_DATA} margin={{ top: 20, right: 30, left: -20, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="region" stroke="rgba(255,255,255,0.4)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                <YAxis yAxisId="left" stroke="rgba(255,255,255,0.4)" fontSize={12} tickLine={false} axisLine={false} label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft', fill: 'rgba(255,255,255,0.4)' }} />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                  contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', backdropFilter: 'blur(8px)' }}
+                />
+                <Legend wrapperStyle={{ paddingTop: '20px', opacity: 0.8 }} />
+                <Bar yAxisId="left" dataKey="funding" name="Fund Utilization (%)" fill="rgba(255, 255, 255, 0.8)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar yAxisId="left" dataKey="attendance" name="Attendance (%)" fill="rgba(255, 255, 255, 0.4)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Line yAxisId="left" type="monotone" dataKey="performance" name="Performance Score" stroke="#ffffff" strokeWidth={3} dot={{ r: 4, fill: '#000000', stroke: '#ffffff', strokeWidth: 2 }} />
+              </ComposedChart>
             </ResponsiveContainer>
           </GlassChartContainer>
         </div>

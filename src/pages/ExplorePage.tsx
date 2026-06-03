@@ -47,23 +47,41 @@ export function ExplorePage() {
 
   const allMergedReps = useMemo(() => {
      const dbMlas = dbCandidates.filter(c => c.type === 'MLA');
+     const dbLoksabha = dbCandidates.filter(c => c.type === 'Lok Sabha');
      
-     // Merge offline reps and just the MLAs from the database
-     const combined = [...representativesData, ...rajyaSabhaData, ...dbMlas];
+     // Merge database and offline fallback representatives beautifully
+     const mlasToUse = dbMlas.length > 0 ? dbMlas : [];
+     const lsToUse = dbLoksabha.length > 0 ? dbLoksabha : representativesData;
+     const rsToUse = rajyaSabhaData;
+
+     const combined = [...mlasToUse, ...lsToUse, ...rsToUse];
      const unique = new Map();
+     
      combined.forEach(rep => {
          let type = rep.type;
-         if (type === 'MP' || type === 'Lok Sabha') type = 'Lok Sabha';
-         else if (!type && rep.constituency) type = 'Lok Sabha';
-         else if (!type) type = 'Rajya Sabha';
+         if (type === 'MP' || type === 'Lok Sabha' || (!type && rep.constituency && !rep.constituency.toLowerCase().includes("rajya"))) {
+            type = 'Lok Sabha';
+         } else if (type === 'Rajya Sabha' || (!type && !rep.constituency)) {
+            type = 'Rajya Sabha';
+         } else if (type === 'MLA') {
+            type = 'MLA';
+         }
 
-         // Fix missing names from crashing toLowerCase
          if (!rep.name) return;
 
-         const finalRep = { ...rep, type };
-         const uniqueKey = finalRep.id || `${finalRep.name.toLowerCase().trim()}-${finalRep.state}-${finalRep.party}`;
+         const finalRep = { 
+           ...rep, 
+           type,
+           name: String(rep.name),
+           state: String(rep.state || "State"),
+           constituency: String(rep.constituency || "Constituency"),
+           party: String(rep.party || "Independent")
+         };
+         
+         const uniqueKey = finalRep.id || `${finalRep.type}-${finalRep.name.toLowerCase().trim()}-${finalRep.state.toLowerCase().trim()}-${finalRep.party.toLowerCase().trim()}`;
          unique.set(uniqueKey, finalRep);
      });
+     
      return Array.from(unique.values());
   }, [dbCandidates]);
 
@@ -93,9 +111,9 @@ export function ExplorePage() {
     return dataSource;
   }, [searchQuery, house, allMergedReps, fuse]);
 
-  const lokSabhaCount = Math.max(allMergedReps.filter(r => r.type === "Lok Sabha").length, 543);
-  const rajyaSabhaCount = Math.max(allMergedReps.filter(r => r.type === "Rajya Sabha").length, 245);
-  const mlaCount = Math.max(allMergedReps.filter(r => r.type === "MLA").length, 4123);
+  const lokSabhaCount = useMemo(() => Math.max(allMergedReps.filter(r => r.type === "Lok Sabha").length, 543), [allMergedReps]);
+  const rajyaSabhaCount = useMemo(() => Math.max(allMergedReps.filter(r => r.type === "Rajya Sabha").length, 245), [allMergedReps]);
+  const mlaCount = useMemo(() => Math.max(allMergedReps.filter(r => r.type === "MLA").length, 4123), [allMergedReps]);
 
   return (
     <MainLayout>
