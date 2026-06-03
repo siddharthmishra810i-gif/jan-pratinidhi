@@ -135,13 +135,25 @@ async function startServer() {
        // Test DB connection
        await prisma.$queryRaw`SELECT 1`;
        
-       const states = await prisma.state.findMany({
-          include: {
-             candidates: {
-                select: { party: true, winner: true, id: true, name: true, totalAssets: true, type: true, constituency: true, education: true, criminalCasesCount: true, totalLiabilities: true }
-             }
-          }
-       });
+      const states = await prisma.state.findMany({
+         include: {
+            candidates: {
+               select: { 
+                 party: true, 
+                 winner: true, 
+                 id: true, 
+                 name: true, 
+                 totalAssets: true, 
+                 type: true, 
+                 constituency: true, 
+                 education: true, 
+                 criminalCasesCount: true, 
+                 totalLiabilities: true,
+                 imageUrl: true
+               }
+            }
+         }
+      });
 
        const analytics = states.map(state => {
           const partyStats: Record<string, number> = {};
@@ -170,7 +182,8 @@ async function startServer() {
                  education: c.education,
                  criminalCasesCount: c.criminalCasesCount,
                  totalAssets: c.totalAssets,
-                 totalLiabilities: c.totalLiabilities
+                 totalLiabilities: c.totalLiabilities,
+                 imageUrl: c.imageUrl
                }))
           };
        });

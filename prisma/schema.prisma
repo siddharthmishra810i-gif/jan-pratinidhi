@@ -52,6 +52,7 @@ model Candidate {
   party              String
   winner             Boolean      @default(false)
   type               String       @default("MLA")
+  imageUrl           String?
   gender             String?
   age                Int?
   education          String?

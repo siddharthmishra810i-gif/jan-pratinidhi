@@ -337,7 +337,7 @@ export function StateAnalyticsPage() {
                   name={rep.name}
                   party={rep.party}
                   constituency={rep.constituency}
-                  image={rep.image}
+                  image={rep.imageUrl || rep.image}
                   type={rep.type}
                 />
               ))}
