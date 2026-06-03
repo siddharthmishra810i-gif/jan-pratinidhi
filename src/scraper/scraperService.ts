@@ -5,6 +5,8 @@ import { logger } from "../utils/logger";
 import { parseRupees } from "../parsers/utils";
 
 export class ScraperService {
+  private totalScraped: number = 0;
+
   async init() {
     logger.info("Initializing Myneta Scraper (Axios + Cheerio)...");
   }
@@ -121,7 +123,7 @@ export class ScraperService {
       if (!electionRecord) return;
 
       const rows = $w(candidateTable).find('tr').slice(1).toArray();
-      logger.info(`Processing ${rows.length} MLAs for ${cleanStateName} (${year})`);
+      logger.info(`Found ${rows.length} MLAs for ${cleanStateName} (${year})`);
 
       for (const row of rows) {
           const cols = $w(row).find('td');
@@ -138,14 +140,25 @@ export class ScraperService {
 
               const name = nameRaw.split('~')[0].trim();
 
-              const constituencyRecord = await prisma.constituency.create({
-                  data: { name: constituencyStr, stateId: stateRecord.id }
-              }).catch(async () => prisma.constituency.findFirst({ where: { name: constituencyStr, stateId: stateRecord.id } }));
+              const constituencyRecord = await prisma.constituency.upsert({
+                  where: { name_stateId: { name: constituencyStr, stateId: stateRecord.id } },
+                  update: {},
+                  create: { name: constituencyStr, stateId: stateRecord.id }
+              });
 
               if (!constituencyRecord) continue;
 
-              await prisma.candidate.create({
-                  data: {
+              await prisma.candidate.upsert({
+                  where: { name_constituencyId: { name, constituencyId: constituencyRecord.id } },
+                  update: {
+                      party: partyStr,
+                      winner: true,
+                      education: educationStr,
+                      criminalCasesCount: criminalRaw,
+                      totalAssets: assetsStr,
+                      totalLiabilities: liabilitiesStr
+                  },
+                  create: {
                       name,
                       stateId: stateRecord.id,
                       electionId: electionRecord.id,
@@ -159,6 +172,13 @@ export class ScraperService {
                       totalLiabilities: liabilitiesStr
                   }
               });
+              
+              this.totalScraped++;
+              if (this.totalScraped % 10 === 0) {
+                 logger.info(`[Progress] Processed ${this.totalScraped} / ~4911 representative profiles... (Latest: ${name} - ${cleanStateName})`);
+              }
+              // Throtte to prevent network timeouts for future links if we fetch candidate pages.
+              await new Promise(r => setTimeout(r, 50));
           }
       }
 

@@ -3,14 +3,14 @@ import { MainLayout } from '../components/layout/MainLayout';
 import { representativesData } from '../data/representatives';
 import { rajyaSabhaData } from '../data/rajyaSabhaData';
 import { GlassStatisticCard } from '../components/ui/GlassStatisticCard';
-import { GlassCard } from '../components/ui/GlassCard';
 import { GlassProfileCard } from '../components/ui/GlassProfileCard';
+import { GlassTable } from '../components/ui/GlassTable';
 import { motion, AnimatePresence } from 'motion/react';
 import { fadeUp, staggerContainer } from '../lib/animations';
 import { ChevronDown, MapPin, Search } from 'lucide-react';
-import { GlassChartContainer } from '../components/ui/GlassChartContainer';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Link } from 'react-router-dom';
+import { calculatePartyDominance } from '../services/analyticsService';
+import { DashboardWidget } from '../components/DashboardWidget';
 
 const allRepresentatives = [...representativesData, ...rajyaSabhaData];
 
@@ -28,6 +28,45 @@ const PARTY_COLORS: Record<string, string> = {
   "Shiv Sena (Uddhav Balasaheb Thackrey)": "#ff6600",
   "Shiv Sena": "#ff6600",
   "Aam Aadmi Party": "#0066A4",
+};
+
+const STATE_SEAT_CAPACITY: Record<string, { ls: number, rs: number, assembly: number }> = {
+  "Andhra Pradesh": { ls: 25, rs: 11, assembly: 175 },
+  "Arunachal Pradesh": { ls: 2, rs: 1, assembly: 60 },
+  "Assam": { ls: 14, rs: 7, assembly: 126 },
+  "Bihar": { ls: 40, rs: 16, assembly: 243 },
+  "Chhattisgarh": { ls: 11, rs: 5, assembly: 90 },
+  "Goa": { ls: 2, rs: 1, assembly: 40 },
+  "Gujarat": { ls: 26, rs: 11, assembly: 182 },
+  "Haryana": { ls: 10, rs: 5, assembly: 90 },
+  "Himachal Pradesh": { ls: 4, rs: 3, assembly: 68 },
+  "Jharkhand": { ls: 14, rs: 6, assembly: 81 },
+  "Karnataka": { ls: 28, rs: 12, assembly: 224 },
+  "Kerala": { ls: 20, rs: 9, assembly: 140 },
+  "Madhya Pradesh": { ls: 29, rs: 11, assembly: 230 },
+  "Maharashtra": { ls: 48, rs: 19, assembly: 288 },
+  "Manipur": { ls: 2, rs: 1, assembly: 60 },
+  "Meghalaya": { ls: 2, rs: 1, assembly: 60 },
+  "Mizoram": { ls: 1, rs: 1, assembly: 40 },
+  "Nagaland": { ls: 1, rs: 1, assembly: 60 },
+  "Odisha": { ls: 21, rs: 10, assembly: 147 },
+  "Punjab": { ls: 13, rs: 7, assembly: 117 },
+  "Rajasthan": { ls: 25, rs: 10, assembly: 200 },
+  "Sikkim": { ls: 1, rs: 1, assembly: 32 },
+  "Tamil Nadu": { ls: 39, rs: 18, assembly: 234 },
+  "Telangana": { ls: 17, rs: 7, assembly: 119 },
+  "Tripura": { ls: 2, rs: 1, assembly: 60 },
+  "Uttar Pradesh": { ls: 80, rs: 31, assembly: 403 },
+  "Uttarakhand": { ls: 5, rs: 3, assembly: 70 },
+  "West Bengal": { ls: 42, rs: 16, assembly: 294 },
+  "NCT of Delhi": { ls: 7, rs: 3, assembly: 70 },
+  "Jammu And Kashmir": { ls: 5, rs: 4, assembly: 90 },
+  "Puducherry": { ls: 1, rs: 1, assembly: 30 },
+  "Andaman and Nicobar Islands": { ls: 1, rs: 0, assembly: 0 },
+  "Chandigarh": { ls: 1, rs: 0, assembly: 0 },
+  "Dadra and Nagar Haveli and Daman and Diu": { ls: 2, rs: 0, assembly: 0 },
+  "Lakshadweep": { ls: 1, rs: 0, assembly: 0 },
+  "Ladakh": { ls: 1, rs: 0, assembly: 0 }
 };
 
 export function StateAnalyticsPage() {
@@ -92,31 +131,9 @@ export function StateAnalyticsPage() {
     return [...dbReps, ...offlineReps];
   }, [selectedState, stateInfoFromDb]);
 
-  const { mpRepresentatives, mlaRepresentatives } = useMemo(() => {
-    const mps = stateRepresentatives.filter(r => r.type !== 'MLA');
-    const mlas = stateRepresentatives.filter(r => r.type === 'MLA');
-    return { mpRepresentatives: mps, mlaRepresentatives: mlas };
+  const partyDominance = useMemo(() => {
+    return calculatePartyDominance(stateRepresentatives);
   }, [stateRepresentatives]);
-
-  const mpPartyStats = useMemo(() => {
-    const counts: Record<string, number> = {};
-    mpRepresentatives.forEach(rep => {
-      counts[rep.party] = (counts[rep.party] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .map(([party, count]) => ({ party, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [mpRepresentatives]);
-
-  const mlaPartyStats = useMemo(() => {
-    const counts: Record<string, number> = {};
-    mlaRepresentatives.forEach(rep => {
-      counts[rep.party] = (counts[rep.party] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .map(([party, count]) => ({ party, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [mlaRepresentatives]);
 
   const filteredReps = useMemo(() => {
     if (!searchQuery.trim()) return stateRepresentatives;
@@ -129,11 +146,38 @@ export function StateAnalyticsPage() {
     );
   }, [stateRepresentatives, searchQuery]);
 
-  const lokSabhaCount = mpRepresentatives.filter(r => r.type === "Lok Sabha" || (!r.type && r.party)).length;
-  const rajyaSabhaCount = mpRepresentatives.filter(r => r.type === "Rajya Sabha").length;
-  const mlaCount = mlaRepresentatives.length;
+  const staticCounts = STATE_SEAT_CAPACITY[selectedState] || { ls: 0, rs: 0, assembly: 0 };
+  const lokSabhaCount = staticCounts.ls || stateRepresentatives.filter(r => r.type === "Lok Sabha" || (!r.type && r.party)).length;
+  const rajyaSabhaCount = staticCounts.rs || stateRepresentatives.filter(r => r.type === "Rajya Sabha").length;
+  const mlaCount = staticCounts.assembly || stateRepresentatives.filter(r => r.type === "MLA").length;
   const totalSeats = lokSabhaCount + rajyaSabhaCount + mlaCount;
 
+  const nationalTotal = {
+    state: "National Total",
+    ls: Object.values(STATE_SEAT_CAPACITY).reduce((acc, curr) => acc + curr.ls, 0),
+    rs: Object.values(STATE_SEAT_CAPACITY).reduce((acc, curr) => acc + curr.rs, 0),
+    assembly: Object.values(STATE_SEAT_CAPACITY).reduce((acc, curr) => acc + curr.assembly, 0),
+    total: Object.values(STATE_SEAT_CAPACITY).reduce((acc, curr) => acc + curr.ls + curr.rs + curr.assembly, 0)
+  };
+
+  const tableData = [
+    ...Object.entries(STATE_SEAT_CAPACITY).map(([state, counts]) => ({
+      state,
+      ls: counts.ls,
+      rs: counts.rs,
+      assembly: counts.assembly,
+      total: counts.ls + counts.rs + counts.assembly
+    })).sort((a, b) => a.state.localeCompare(b.state)),
+    nationalTotal
+  ];
+
+  const tableColumns = [
+    { header: "State / UT", accessor: "state" },
+    { header: "Lok Sabha Seats", accessor: "ls" },
+    { header: "Rajya Sabha Seats", accessor: "rs" },
+    { header: "Assembly Seats", accessor: "assembly" },
+    { header: "Total Seats", accessor: "total" }
+  ];
 
   return (
     <MainLayout>
@@ -194,6 +238,18 @@ export function StateAnalyticsPage() {
           </AnimatePresence>
         </div>
 
+        {!selectedState && (
+          <motion.div
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ duration: 0.5 }}
+             className="relative z-10 space-y-8"
+          >
+             <h2 className="text-2xl font-serif text-white tracking-tight">National Seat Distribution</h2>
+             <GlassTable columns={tableColumns} data={tableData} />
+          </motion.div>
+        )}
+
         {selectedState && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -208,59 +264,7 @@ export function StateAnalyticsPage() {
               <GlassStatisticCard label="Legislative Assembly (MLAs)" value={mlaCount.toString()} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
-              <div className="space-y-4">
-                <h3 className="text-xl font-serif text-white px-2">MP Seats (Lok Sabha & Rajya Sabha)</h3>
-                <GlassChartContainer title="">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={mpPartyStats} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                      <XAxis dataKey="party" stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => val.split(' ').map((w: string) => w[0]).join('')} />
-                      <YAxis stroke="rgba(255,255,255,0.4)" fontSize={12} tickLine={false} axisLine={false} />
-                      <Tooltip 
-                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                        contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', backdropFilter: 'blur(8px)' }}
-                        itemStyle={{ color: '#fff' }}
-                      />
-                      <Bar dataKey="count" name="Seats Won" radius={[4, 4, 0, 0]}>
-                        {mpPartyStats.map((entry, index) => (
-                           <Cell key={`cell-${index}`} fill={PARTY_COLORS[entry.party] || "#ffffff"} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </GlassChartContainer>
-              </div>
-
-              <div className="space-y-4">
-                 <h3 className="text-xl font-serif text-white px-2">MLA Seats (Legislative Assembly)</h3>
-                 {mlaPartyStats.length > 0 ? (
-                    <GlassChartContainer title="">
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={mlaPartyStats} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                          <XAxis dataKey="party" stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => val.split(' ').map((w: string) => w[0]).join('')} />
-                          <YAxis stroke="rgba(255,255,255,0.4)" fontSize={12} tickLine={false} axisLine={false} />
-                          <Tooltip 
-                            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                            contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', backdropFilter: 'blur(8px)' }}
-                            itemStyle={{ color: '#fff' }}
-                          />
-                          <Bar dataKey="count" name="Seats Won" radius={[4, 4, 0, 0]}>
-                            {mlaPartyStats.map((entry, index) => (
-                               <Cell key={`cell-${index}`} fill={PARTY_COLORS[entry.party] || "#ffffff"} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </GlassChartContainer>
-                 ) : (
-                   <div className="liquid-glass rounded-3xl p-8 flex items-center justify-center h-[348px]">
-                     <span className="text-white/40">No MLA Data Available for this State</span>
-                   </div>
-                 )}
-              </div>
-            </div>
+            <DashboardWidget partyDominance={partyDominance} />
 
             <div className="mb-16">
               <h2 className="text-2xl font-serif text-white tracking-tight mb-6">Legislative Council (MLC) Districts</h2>
@@ -325,10 +329,10 @@ export function StateAnalyticsPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredReps.map(rep => (
+              {filteredReps.map((rep, idx) => (
                 <GlassProfileCard 
-                  key={rep.id} 
-                  id={rep.id || ''}
+                  key={rep.id || `rep-${idx}`} 
+                  id={rep.id || rep.name.replace(/\s+/g, '-').toLowerCase()}
                   name={rep.name}
                   party={rep.party}
                   constituency={rep.constituency}

@@ -35,6 +35,8 @@ model Constituency {
   candidates     Candidate[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+
+  @@unique([name, stateId])
 }
 
 model Candidate {
@@ -77,6 +79,8 @@ model Candidate {
 
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
+
+  @@unique([name, constituencyId])
 }
 
 model Assets {

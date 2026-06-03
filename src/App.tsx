@@ -5,6 +5,7 @@ import { ComparePage } from "./pages/ComparePage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { RepresentativeProfilePage } from "./pages/RepresentativeProfilePage";
 import { StateAnalyticsPage } from "./pages/StateAnalyticsPage";
+import { ExploreMapPage } from "./pages/maps/ExploreMapPage";
 import { FloatingAIChat } from "./components/ui/FloatingAIChat";
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/explore" element={<ExplorePage />} />
+        <Route path="/map" element={<ExploreMapPage />} />
         <Route path="/states" element={<StateAnalyticsPage />} />
         <Route path="/compare" element={<ComparePage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />

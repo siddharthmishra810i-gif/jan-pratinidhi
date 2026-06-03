@@ -4,11 +4,12 @@ import { MainLayout } from "../components/layout/MainLayout";
 import { GlassInput } from "../components/ui/GlassInput";
 import { Search, ChevronRight } from "lucide-react";
 import { GlassStatisticCard } from "../components/ui/GlassStatisticCard";
-import { GlassProfileCard } from "../components/ui/GlassProfileCard";
+import { RepresentativeFeed } from "../components/ui/RepresentativeFeed";
 import { motion, AnimatePresence } from "motion/react";
 import { staggerContainer } from "../lib/animations";
 import { representativesData } from "../data/representatives";
 import { rajyaSabhaData } from "../data/rajyaSabhaData";
+import Fuse from "fuse.js";
 import axios from 'axios';
 
 export function ExplorePage() {
@@ -45,36 +46,56 @@ export function ExplorePage() {
   }, []);
 
   const allMergedReps = useMemo(() => {
-     return [...representativesData, ...rajyaSabhaData, ...dbCandidates];
+     const dbMlas = dbCandidates.filter(c => c.type === 'MLA');
+     
+     // Merge offline reps and just the MLAs from the database
+     const combined = [...representativesData, ...rajyaSabhaData, ...dbMlas];
+     const unique = new Map();
+     combined.forEach(rep => {
+         let type = rep.type;
+         if (type === 'MP' || type === 'Lok Sabha') type = 'Lok Sabha';
+         else if (!type && rep.constituency) type = 'Lok Sabha';
+         else if (!type) type = 'Rajya Sabha';
+
+         // Fix missing names from crashing toLowerCase
+         if (!rep.name) return;
+
+         const finalRep = { ...rep, type };
+         const uniqueKey = finalRep.id || `${finalRep.name.toLowerCase().trim()}-${finalRep.state}-${finalRep.party}`;
+         unique.set(uniqueKey, finalRep);
+     });
+     return Array.from(unique.values());
   }, [dbCandidates]);
+
+  const fuse = useMemo(() => {
+    return new Fuse(allMergedReps, {
+      keys: ['name', 'state', 'constituency', 'party'],
+      threshold: 0.3,
+      distance: 100,
+    });
+  }, [allMergedReps]);
 
   const filteredRepresentatives = useMemo(() => {
     let dataSource = allMergedReps;
+
+    if (searchQuery.trim()) {
+      dataSource = fuse.search(searchQuery).map(result => result.item);
+    }
+
     if (house === "lok_sabha") {
-        dataSource = dataSource.filter(r => r.type === "Lok Sabha" || (!r.type && r.party && !r.type?.includes("Rajya") && r.type !== "MLA"));
+        dataSource = dataSource.filter(r => r.type === "Lok Sabha");
     } else if (house === "rajya_sabha") {
         dataSource = dataSource.filter(r => r.type === "Rajya Sabha");
     } else if (house === "mla") {
         dataSource = dataSource.filter(r => r.type === "MLA");
     }
 
-    if (!searchQuery.trim()) {
-      return dataSource.slice(0, 16); 
-    }
-    
-    const query = searchQuery.toLowerCase().trim();
-    return dataSource.filter((rep) => 
-      (rep.name || "").toLowerCase().includes(query) ||
-      (rep.constituency || "").toLowerCase().includes(query) ||
-      (rep.party || "").toLowerCase().includes(query) ||
-      (rep.state || "").toLowerCase().includes(query) ||
-      (rep.type || "").toLowerCase().includes(query)
-    );
-  }, [searchQuery, house, allMergedReps]);
+    return dataSource;
+  }, [searchQuery, house, allMergedReps, fuse]);
 
-  const lokSabhaCount = allMergedReps.filter(r => r.type === "Lok Sabha" || (!r.type && r.party && !r.type?.includes("Rajya") && r.type !== "MLA")).length;
-  const rajyaSabhaCount = allMergedReps.filter(r => r.type === "Rajya Sabha").length;
-  const mlaCount = allMergedReps.filter(r => r.type === "MLA").length;
+  const lokSabhaCount = Math.max(allMergedReps.filter(r => r.type === "Lok Sabha").length, 543);
+  const rajyaSabhaCount = Math.max(allMergedReps.filter(r => r.type === "Rajya Sabha").length, 245);
+  const mlaCount = Math.max(allMergedReps.filter(r => r.type === "MLA").length, 4123);
 
   return (
     <MainLayout>
@@ -145,65 +166,28 @@ export function ExplorePage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-20 md:mb-32">
-          <GlassStatisticCard label="Lok Sabha MPs" value={lokSabhaCount.toString()} />
-          <GlassStatisticCard label="Rajya Sabha MPs" value={rajyaSabhaCount.toString()} />
-          <GlassStatisticCard label="Total MLAs" value={mlaCount.toString()} />
-          <GlassStatisticCard label="Total Representatives" value={allMergedReps.length.toString()} />
+          <GlassStatisticCard label="Lok Sabha MPs" value={lokSabhaCount.toLocaleString()} />
+          <GlassStatisticCard label="Rajya Sabha MPs" value={rajyaSabhaCount.toLocaleString()} />
+          <GlassStatisticCard label="Total MLAs" value={mlaCount.toLocaleString()} />
+          <GlassStatisticCard label="Total Representatives" value={(lokSabhaCount + rajyaSabhaCount + mlaCount).toLocaleString()} />
         </div>
 
         {/* Highlighted Profiles */}
         <div className="mb-8 min-h-[500px]">
            <div className="flex justify-between items-end mb-8 md:mb-12 border-b border-white/10 pb-6">
              <h2 className="text-3xl md:text-4xl font-serif text-white tracking-tight">
-               {searchQuery ? `Search Results (${filteredRepresentatives.length})` : "Featured Representatives"}
+               {searchQuery ? `Search Results (${filteredRepresentatives.length})` : "Representatives"}
              </h2>
-             {!searchQuery && (
-               <button className="text-white/60 hover:text-white uppercase tracking-widest text-xs flex items-center gap-1 transition-colors group">
-                 View All <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-               </button>
-             )}
            </div>
            
            {loading ? (
               <div className="py-20 text-center text-white/50">Loading database data...</div>
-           ) : filteredRepresentatives.length > 0 ? (
-             <motion.div 
-               {...staggerContainer}
-               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-             >
-               <AnimatePresence>
-                 {filteredRepresentatives.map((rep) => (
-                   <motion.div
-                     key={rep.id || rep.name}
-                     initial={{ opacity: 0, scale: 0.95 }}
-                     animate={{ opacity: 1, scale: 1 }}
-                     exit={{ opacity: 0, scale: 0.95 }}
-                     transition={{ duration: 0.3 }}
-                   >
-                     <GlassProfileCard 
-                       id={rep.id || rep.name.replace(/\s+/g, '-').toLowerCase()} 
-                       name={rep.name} 
-                       party={rep.party} 
-                       constituency={rep.constituency ? `${rep.constituency}, ${rep.state}` : rep.state}
-                       type={rep.type || (!rep.type && !rep.constituency ? 'Rajya Sabha' : 'Lok Sabha')}
-                       image={rep.image}
-                     />
-                   </motion.div>
-                 ))}
-               </AnimatePresence>
-             </motion.div>
            ) : (
-             <div className="py-20 text-center flex flex-col items-center justify-center">
-               <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                 <Search className="w-8 h-8 text-white/20" />
-               </div>
-               <h3 className="text-xl text-white font-serif mb-2">No representatives found</h3>
-               <p className="text-white/50">Try adjusting your search criteria</p>
-             </div>
+             <RepresentativeFeed representatives={filteredRepresentatives} />
            )}
         </div>
-
       </div>
     </MainLayout>
   );
 }
+

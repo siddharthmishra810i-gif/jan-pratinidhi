@@ -1,36 +1,93 @@
-import React from "react";
+import React, { ReactNode } from 'react';
+import { motion } from 'motion/react';
+import { fadeUp } from '../../lib/animations';
 
-export function GlassTable({ children }: { children: React.ReactNode }) {
+interface Pillar {
+  header: string;
+  accessor: string;
+}
+
+interface GlassTableProps {
+  columns?: Pillar[];
+  data?: any[];
+  children?: ReactNode;
+}
+
+export function GlassTable({ columns, data, children }: GlassTableProps) {
+  if (children) {
+     return (
+       <div className="overflow-x-auto w-full border border-white/10 rounded-2xl liquid-glass">
+         <table className="w-full text-left border-collapse">
+            {children}
+         </table>
+       </div>
+     );
+  }
+
   return (
-    <div className="liquid-glass rounded-3xl overflow-hidden w-full overflow-x-auto">
-      <table className="w-full text-left border-collapse min-w-[600px]">
-        {children}
+    <div className="overflow-x-auto w-full border border-white/10 rounded-2xl liquid-glass">
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="border-b border-white/10 text-white/50 text-sm tracking-wider uppercase bg-white/[0.02]">
+            {columns?.map((col, idx) => (
+              <th key={col.accessor + idx} className="py-4 px-6 font-medium">
+                {col.header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <motion.tbody 
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: { staggerChildren: 0.05 }
+            }
+          }}
+        >
+          {data?.map((row, rowIdx) => (
+            <motion.tr 
+              key={rowIdx} 
+              variants={fadeUp}
+              className="border-b border-white/5 hover:bg-white/[0.04] transition-colors"
+            >
+              {columns?.map((col, colIdx) => (
+                <td key={colIdx} className="py-5 px-6 text-white text-base">
+                  {row[col.accessor]}
+                </td>
+              ))}
+            </motion.tr>
+          ))}
+        </motion.tbody>
       </table>
     </div>
   );
 }
 
-export function GlassTableHeader({ children }: { children: React.ReactNode }) {
+export function GlassTableHeader({ children }: { children: ReactNode }) {
   return (
-    <thead className="bg-white/5 border-b border-white/10 uppercase tracking-widest text-[10px] sm:text-xs text-white/50">
-      <tr>{children}</tr>
+    <thead>
+      <tr className="border-b border-white/10 bg-white/[0.02]">
+        {children}
+      </tr>
     </thead>
   );
 }
 
-export function GlassTableCell({ children, className = "", isHeader = false }: { children: React.ReactNode; className?: string; isHeader?: boolean }) {
-  const Component = isHeader ? "th" : "td";
+export function GlassTableRow({ children, className = "" }: { children: ReactNode, className?: string }) {
   return (
-    <Component className={`p-4 md:p-6 align-middle ${isHeader ? 'font-medium' : 'text-white/80'} ${className}`}>
-      {children}
-    </Component>
-  );
-}
-
-export function GlassTableRow({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <tr className={`border-b border-white/5 last:border-none hover:bg-white/[0.02] transition-colors ${className}`}>
+    <tr className={`border-b border-white/5 hover:bg-white/[0.04] transition-colors ${className}`}>
       {children}
     </tr>
   );
 }
+
+export function GlassTableCell({ children, isHeader = false, className = "" }: { children: ReactNode, isHeader?: boolean, className?: string }) {
+  if (isHeader) {
+    return <th className={`py-4 px-6 font-medium text-white/50 text-sm tracking-wider uppercase ${className}`}>{children}</th>;
+  }
+  return <td className={`py-5 px-6 text-white text-base ${className}`}>{children}</td>;
+}
+
