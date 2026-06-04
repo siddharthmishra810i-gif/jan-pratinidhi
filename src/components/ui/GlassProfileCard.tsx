@@ -9,9 +9,11 @@ interface GlassProfileCardProps {
   constituency: string;
   image?: string;
   type: string;
+  attendance?: number | null;
+  questionsAsked?: number | null;
 }
 
-export function GlassProfileCard({ id, name, party, constituency, image, type }: GlassProfileCardProps) {
+export function GlassProfileCard({ id, name, party, constituency, image, type, attendance, questionsAsked }: GlassProfileCardProps) {
   const safeName = name || "Unknown";
 
   return (
@@ -37,8 +39,21 @@ export function GlassProfileCard({ id, name, party, constituency, image, type }:
         <div className="p-6 flex-1 flex flex-col">
           <h3 className="text-2xl font-serif text-white mb-2">{safeName}</h3>
           <p className="text-white/60 text-sm mb-4 flex-1">{party}</p>
-          <div className="text-white/40 text-[10px] sm:text-xs tracking-widest uppercase border-t border-white/10 pt-4 mt-auto line-clamp-1">
-            {constituency}
+          <div className="flex flex-col gap-2 border-t border-white/10 pt-4 mt-auto">
+            <div className="text-white/40 text-[10px] sm:text-xs tracking-widest uppercase line-clamp-1">
+              {constituency}
+            </div>
+            
+            {(attendance != null || questionsAsked != null) && (
+              <div className="flex items-center gap-4 text-xs font-mono text-white/50">
+                 {attendance != null && (
+                   <span title="Attendance">Att: {attendance}%</span>
+                 )}
+                 {questionsAsked != null && (
+                   <span title="Questions Asked">Q's: {questionsAsked}</span>
+                 )}
+              </div>
+            )}
           </div>
         </div>
       </motion.div>

@@ -43,14 +43,29 @@ async function main() {
   await scraper.init();
 
   for (const [stateName, url] of Object.entries(REAL_STATE_URLS)) {
+    const existing = await prisma.state.findUnique({
+      where: { name: stateName },
+      include: { _count: { select: { candidates: true } } }
+    });
+    
+    if (existing && existing._count.candidates > 20) {
+      logger.info(`Skipping ${stateName}, already has ${existing._count.candidates} candidates...`);
+      continue;
+    }
+
     logger.info(`>>> Pulling data for ${stateName}...`);
+    let timeoutId;
     try {
       await Promise.race([
         scraper['scrapeStateWithRetry'](url, stateName, 2),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout after 180 seconds")), 180000))
+        new Promise((_, reject) => {
+           timeoutId = setTimeout(() => reject(new Error("Timeout after 60 seconds")), 60000);
+        })
       ]);
     } catch (e) {
       logger.error(`Error scraping ${stateName}: ${e}`);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
   }
   

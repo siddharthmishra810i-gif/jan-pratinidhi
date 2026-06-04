@@ -62,14 +62,16 @@ export function RepresentativeProfilePage() {
       party: dbRep.party,
       constituency: dbRep.constituency?.name || '',
       state: dbRep.state?.name || '',
-      status: 'MLA',
+      status: dbRep.type || 'MLA',
       terms: 1,
-      type: 'MLA',
+      type: dbRep.type || 'MLA',
       criminalCasesCount: dbRep.criminalCasesCount,
       totalAssets: dbRep.totalAssets,
       totalLiabilities: dbRep.totalLiabilities,
       education: dbRep.education,
-      image: undefined
+      image: dbRep.imageUrl,
+      attendance: dbRep.attendance,
+      questionsAsked: dbRep.questionsAsked
   } : representative;
 
   const addressInfo = representative ? getAddressForMP(representative.name) : {
@@ -84,7 +86,7 @@ export function RepresentativeProfilePage() {
       education: dbRep?.education || 'N/A'
   };
   const attendanceData = representative ? getAttendanceData(representative.id, representative.name) : {
-      percentage: 'N/A', daysSigned: 0, totalDays: 0, questionsAsked: 0
+      percentage: repData?.attendance || 'N/A', daysSigned: 0, totalDays: 0, questionsAsked: repData?.questionsAsked || 0
   };
   const questions = representative ? getQuestionsForMP(representative.id, representative.name) : [];
 
@@ -146,8 +148,16 @@ export function RepresentativeProfilePage() {
           </motion.section>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <GlassStatisticCard label="Parliament Attendance (18th Session)" value={`${attendanceData.percentage}%`} trend={`${attendanceData.daysSigned} / ${attendanceData.totalDays} days`} />
-            <GlassStatisticCard label="Questions Asked" value={attendanceData.questionsAsked.toString()} trend="In 18th Session" />
+            <GlassStatisticCard 
+              label="Attendance (Overall)" 
+              value={attendanceData.percentage !== 'N/A' ? `${attendanceData.percentage}%` : 'N/A'} 
+              trend={attendanceData.totalDays ? `${attendanceData.daysSigned} / ${attendanceData.totalDays} days` : undefined} 
+            />
+            <GlassStatisticCard 
+              label="Questions Asked" 
+              value={attendanceData.questionsAsked?.toString() || '0'} 
+              trend={!isDbRep ? "In 18th Session" : undefined} 
+            />
             <GlassStatisticCard label={`${repData.type} Terms`} value={repData.terms} />
             <GlassStatisticCard label="Constituency" value={repData.constituency} />
           </div>

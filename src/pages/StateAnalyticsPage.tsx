@@ -147,6 +147,30 @@ export function StateAnalyticsPage() {
     );
   }, [stateRepresentatives, searchQuery]);
 
+  const stateAverages = useMemo(() => {
+    if (stateRepresentatives.length === 0) return null;
+    let attSum = 0;
+    let attCount = 0;
+    let qsSum = 0;
+    let qsCount = 0;
+
+    for (const rep of stateRepresentatives) {
+      if (rep.attendance != null) {
+        attSum += rep.attendance;
+        attCount++;
+      }
+      if (rep.questionsAsked != null) {
+        qsSum += rep.questionsAsked;
+        qsCount++;
+      }
+    }
+
+    return {
+      attendance: attCount > 0 ? (attSum / attCount).toFixed(1) : null,
+      questions: qsCount > 0 ? Math.round(qsSum / qsCount) : null
+    };
+  }, [stateRepresentatives]);
+
   const staticCounts = STATE_SEAT_CAPACITY[selectedState] || { ls: 0, rs: 0, assembly: 0 };
   const lokSabhaCount = staticCounts.ls || stateRepresentatives.filter(r => r.type === "Lok Sabha" || (!r.type && r.party)).length;
   const rajyaSabhaCount = staticCounts.rs || stateRepresentatives.filter(r => r.type === "Rajya Sabha").length;
@@ -267,6 +291,20 @@ export function StateAnalyticsPage() {
 
             <DashboardWidget partyDominance={partyDominance} />
 
+            {stateAverages && (stateAverages.attendance !== null || stateAverages.questions !== null) && (
+              <div className="mb-12">
+                <h2 className="text-2xl font-serif text-white tracking-tight mb-6">Legislative Performance Averages</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {stateAverages.attendance !== null && (
+                    <GlassStatisticCard label="Average Attendance" value={`${stateAverages.attendance}%`} />
+                  )}
+                  {stateAverages.questions !== null && (
+                    <GlassStatisticCard label="Avg. Questions Asked" value={stateAverages.questions.toString()} />
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="mb-16">
               <h2 className="text-2xl font-serif text-white tracking-tight mb-6">Legislative Council (MLC) Districts</h2>
               <div className="liquid-glass p-8 rounded-3xl md:flex flex-col gap-6 border border-white/5">
@@ -339,6 +377,8 @@ export function StateAnalyticsPage() {
                   constituency={rep.constituency}
                   image={rep.imageUrl || rep.image}
                   type={rep.type}
+                  attendance={rep.attendance}
+                  questionsAsked={rep.questionsAsked}
                 />
               ))}
               {filteredReps.length === 0 && (

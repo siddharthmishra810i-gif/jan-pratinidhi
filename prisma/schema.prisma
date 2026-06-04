@@ -58,6 +58,9 @@ model Candidate {
   education          String?
   profession         String?
   
+  attendance         Float?
+  questionsAsked     Int?
+  
   totalAssets        Float?
   totalLiabilities   Float?
   criminalCasesCount Int          @default(0)

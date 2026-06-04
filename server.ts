@@ -149,7 +149,9 @@ async function startServer() {
                  education: true, 
                  criminalCasesCount: true, 
                  totalLiabilities: true,
-                 imageUrl: true
+                 imageUrl: true,
+                 attendance: true,
+                 questionsAsked: true
                }
             }
          }
@@ -183,7 +185,9 @@ async function startServer() {
                  criminalCasesCount: c.criminalCasesCount,
                  totalAssets: c.totalAssets,
                  totalLiabilities: c.totalLiabilities,
-                 imageUrl: c.imageUrl
+                 imageUrl: c.imageUrl,
+                 attendance: c.attendance,
+                 questionsAsked: c.questionsAsked
                }))
           };
        });
