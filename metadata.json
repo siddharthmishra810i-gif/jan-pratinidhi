@@ -1,6 +1,7 @@
 {
-  "name": "Jan-Pratinidhi",
-  "description": "India's Complete Political Transparency Platform",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "Transparency App",
+  "description": "Political transparency dashboard",
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import cors from "cors";
+import compression from "compression";
 import { GoogleGenAI } from "@google/genai";
 
 async function startServer() {
@@ -9,6 +10,7 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(cors());
+  app.use(compression());
   app.use(express.json());
 
   // API Routes
