@@ -151,7 +151,9 @@ async function startServer() {
                  totalLiabilities: true,
                  imageUrl: true,
                  attendance: true,
-                 questionsAsked: true
+                 questionsAsked: true,
+                 debates: true,
+                 pvtMemberBills: true
                }
             }
          }
@@ -187,7 +189,9 @@ async function startServer() {
                  totalLiabilities: c.totalLiabilities,
                  imageUrl: c.imageUrl,
                  attendance: c.attendance,
-                 questionsAsked: c.questionsAsked
+                 questionsAsked: c.questionsAsked,
+                 debates: c.debates,
+                 pvtMemberBills: c.pvtMemberBills
                }))
           };
        });

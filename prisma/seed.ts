@@ -67,34 +67,6 @@ const partyProfiles: Record<string, string[]> = {
 };
 
 const REAL_STATE_URLS: Record<string, string> = {
-  "Assam": "https://www.myneta.info/Assam2026/index.php?action=show_winners&sort=default",
-  "Chhattisgarh": "https://www.myneta.info/Chhattisgarh2023/index.php?action=show_winners&sort=default",
-  "Gujarat": "https://www.myneta.info/Gujarat2022/index.php?action=show_winners&sort=default",
-  "Haryana": "https://www.myneta.info/Haryana2024/index.php?action=show_winners&sort=default",
-  "Goa": "https://www.myneta.info/goa2022/index.php?action=show_winners&sort=default",
-  "Himachal Pradesh": "https://www.myneta.info/HimachalPradesh2022/index.php?action=show_winners&sort=default",
-  "Jammu And Kashmir": "https://www.myneta.info/JammuKashmir2024/index.php?action=show_winners&sort=default",
-  "Jharkhand": "https://www.myneta.info/Jharkhand2024/index.php?action=show_winners&sort=default",
-  "Karnataka": "https://www.myneta.info/Karnataka2023/index.php?action=show_winners&sort=default",
-  "Kerala": "https://www.myneta.info/Kerala2026/index.php?action=show_winners&sort=default",
-  "Madhya Pradesh": "https://www.myneta.info/MadhyaPradesh2023/index.php?action=show_winners&sort=default",
-  "Maharashtra": "https://www.myneta.info/Maharashtra2024/index.php?action=show_winners&sort=default",
-  "Manipur": "https://www.myneta.info/manipur2022/index.php?action=show_winners&sort=default",
-  "Meghalaya": "https://www.myneta.info/Meghalaya2023/index.php?action=show_winners&sort=default",
-  "Mizoram": "https://www.myneta.info/Mizoram2023/index.php?action=show_winners&sort=default",
-  "NCT of Delhi": "https://www.myneta.info/Delhi2025/index.php?action=show_winners&sort=default",
-  "Nagaland": "https://www.myneta.info/Nagaland2023/index.php?action=show_winners&sort=default",
-  "Odisha": "https://www.myneta.info/Odisha2024/index.php?action=show_winners&sort=default",
-  "Punjab": "https://www.myneta.info/punjab2022/index.php?action=show_winners&sort=default",
-  "Rajasthan": "https://www.myneta.info/Rajasthan2023/index.php?action=show_winners&sort=default",
-  "Sikkim": "https://www.myneta.info/Sikkim2024/index.php?action=show_winners&sort=default",
-  "Tamil Nadu": "https://www.myneta.info/TamilNadu2021/index.php?action=show_winners&sort=default",
-  "Telangana": "https://www.myneta.info/Telangana2023/index.php?action=show_winners&sort=default",
-  "Tripura": "https://www.myneta.info/Tripura2023/index.php?action=show_winners&sort=default",
-  "Uttar Pradesh": "https://www.myneta.info/uttarpradesh2022/index.php?action=show_winners&sort=default",
-  "Uttarakhand": "https://www.myneta.info/uttarakhand2022/index.php?action=show_winners&sort=default",
-  "West Bengal": "https://www.myneta.info/WestBengal2026/index.php?action=show_winners&sort=default",
-  "Bihar": "https://www.myneta.info/Bihar2025/index.php?action=show_winners&sort=default"
 };
 
 function getRandomName() {
@@ -150,7 +122,12 @@ async function main() {
             await prisma.candidate.create({
               data: {
                 name, stateId: state.id, constituencyId: c.id, electionId: electionLS.id,
-                party: stateParties[Math.floor(Math.random() * stateParties.length)], winner: true, type: "Lok Sabha"
+                party: stateParties[Math.floor(Math.random() * stateParties.length)],
+                winner: true, type: "Lok Sabha",
+                attendance: Math.floor(Math.random() * 50) + 50,
+                questionsAsked: Math.floor(Math.random() * 150),
+                criminalCasesCount: Math.random() > 0.8 ? Math.floor(Math.random() * 5) : 0,
+                totalAssets: Math.random() * 100000000
               }
             });
           } catch (err: any) {
@@ -183,7 +160,11 @@ async function main() {
           await prisma.candidate.create({
             data: {
               name, stateId: state.id, constituencyId: c.id, electionId: electionLS.id,
-              party: stateParties[Math.floor(Math.random() * stateParties.length)], winner: true, type: "Lok Sabha"
+              party: stateParties[Math.floor(Math.random() * stateParties.length)], winner: true, type: "Lok Sabha",
+              attendance: Math.floor(Math.random() * 50) + 50,
+              questionsAsked: Math.floor(Math.random() * 150),
+              criminalCasesCount: Math.random() > 0.8 ? Math.floor(Math.random() * 5) : 0,
+              totalAssets: Math.random() * 100000000
             }
           });
         } catch (err: any) {
@@ -202,7 +183,11 @@ async function main() {
           await prisma.candidate.create({
             data: {
               name, stateId: state.id, constituencyId: c.id, electionId: electionAssembly.id,
-              party: stateParties[Math.floor(Math.random() * stateParties.length)], winner: true, type: "MLA"
+              party: stateParties[Math.floor(Math.random() * stateParties.length)], winner: true, type: "MLA",
+              attendance: Math.floor(Math.random() * 50) + 50,
+              questionsAsked: Math.floor(Math.random() * 150),
+              criminalCasesCount: Math.random() > 0.8 ? Math.floor(Math.random() * 5) : 0,
+              totalAssets: Math.random() * 100000000
             }
           });
         } catch (err: any) {

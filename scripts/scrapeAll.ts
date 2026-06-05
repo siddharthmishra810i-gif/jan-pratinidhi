@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { ScraperService } from "../src/scraper/scraperService";
 import { logger } from "../src/utils/logger";
+import axios from "axios";
+import * as cheerio from "cheerio";
 
 const prisma = new PrismaClient();
 
@@ -38,38 +40,100 @@ const REAL_STATE_URLS: Record<string, string> = {
 };
 
 async function main() {
-  logger.info(`Starting per-state data pull for ${Object.keys(REAL_STATE_URLS).length} states...`);
+      // First we clear duplicate MLAs to restart mapping properly without messy count
+      // This will reset them if there are more than ~4100
+      const duplicateCount = await prisma.candidate.count({ where: { type: "MLA" }});
+      if (duplicateCount > 4300) {
+         logger.info(`Found ${duplicateCount} candidates! That means duplicates exist. Dropping all MLAs to sync cleanly...`);
+         await prisma.candidate.deleteMany({ where: { type: "MLA"} });
+      }
+
+      logger.info(`Starting PARALLEL data pull for ${Object.keys(REAL_STATE_URLS).length} states...`);
   const scraper = new ScraperService();
   await scraper.init();
 
+  const startTime = Date.now();
+
   for (const [stateName, url] of Object.entries(REAL_STATE_URLS)) {
-    const existing = await prisma.state.findUnique({
-      where: { name: stateName },
-      include: { _count: { select: { candidates: true } } }
-    });
+    // Skipping soft loop timer to guarantee full DB sync. Node timeout will kill if really stuck.
     
-    if (existing && existing._count.candidates > 20) {
-      logger.info(`Skipping ${stateName}, already has ${existing._count.candidates} candidates...`);
+    const state = await prisma.state.findUnique({
+      where: { name: stateName },
+    });
+
+    let existingCount = 0;
+    if (state) {
+      existingCount = await prisma.candidate.count({
+        where: { stateId: state.id, type: "MLA" }
+      });
+    }
+    
+    // States expected counts:
+    const expectedMap: Record<string, number> = {
+      "Sikkim": 32, "Mizoram": 40, "Goa": 40, "Arunachal Pradesh": 60, "Manipur": 60, "Meghalaya": 60,
+      "Nagaland": 60, "Tripura": 60, "Himachal Pradesh": 68, "Uttarakhand": 70, "NCT of Delhi": 70,
+      "Jharkhand": 81, "Haryana": 90, "Chhattisgarh": 90, "Jammu and Kashmir": 90,
+      "Punjab": 117, "Telangana": 119, "Assam": 126, "Kerala": 140, "Odisha": 147, "Andhra Pradesh": 175,
+      "Gujarat": 182, "Rajasthan": 200, "Karnataka": 224, "Madhya Pradesh": 230, "Tamil Nadu": 234,
+      "Bihar": 243, "Maharashtra": 288, "West Bengal": 294, "Uttar Pradesh": 403
+    };
+    
+    // We expect at least the majority of them. Skip if we reach the soft number.
+    const expected = expectedMap[stateName] || 40;
+    if (state && existingCount >= expected) {
+      logger.info(`Skipping ${stateName}, already has ${existingCount} candidates...`);
       continue;
     }
 
     logger.info(`>>> Pulling data for ${stateName}...`);
-    let timeoutId;
     try {
-      await Promise.race([
-        scraper['scrapeStateWithRetry'](url, stateName, 2),
-        new Promise((_, reject) => {
-           timeoutId = setTimeout(() => reject(new Error("Timeout after 60 seconds")), 60000);
-        })
-      ]);
-    } catch (e) {
-      logger.error(`Error scraping ${stateName}: ${e}`);
-    } finally {
-      if (timeoutId) clearTimeout(timeoutId);
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout scraping state')), 90000));
+        await Promise.race([scraper['scrapeStateWithRetry'](url, stateName, 1), timeoutPromise]);
+    } catch (e: any) {
+      logger.error(`Error scraping ${stateName}: ${e.message}`);
     }
+    await new Promise(r => setTimeout(r, 1000));
   }
   
   logger.info("Scraping complete. Running verification logic inline...");
+
+  const verifyData = async () => {
+      const candidates = await prisma.candidate.findMany({
+         where: { type: "MLA", profileUrl: { not: null }, imageUrl: null }
+      });
+      
+      logger.info(`Found ${candidates.length} candidates with a MYNETA profile URL but no image. Attempting to pull images...`);
+      
+      let matchCount = 0;
+      for (const c of candidates) {
+           try {
+               const { data: directHtml } = await axios.get(c.profileUrl!, { timeout: 15000 });
+               const $ = cheerio.load(directHtml);
+               
+               // Based on myneta structure, candidates images are usually here
+               const rawImg = $('.grid_3 img').attr('src');
+               
+               if (rawImg && !rawImg.toLowerCase().includes('dummy')) { 
+                  const imgUrl = rawImg.startsWith('http') ? rawImg : `https://myneta.info/` + (rawImg.startsWith('../') ? rawImg.substring(3) : rawImg);
+                  await prisma.candidate.update({
+                     where: { id: c.id },
+                     data: { imageUrl: imgUrl }
+                  });
+                  matchCount++;
+               }
+               
+               await new Promise(r => setTimeout(r, 10)); // delay
+           } catch(e: any) {
+               logger.error(`Error mapping image for ${c.name} (${c.profileUrl}): ${e.message}`);
+           }
+      }
+      
+      logger.info(`Successfully mapped ${matchCount} images!`);
+  };
+
+  // Verify images via the fallback scraper sequentially
+  await verifyData();
+
   
   const totalMLAs = await prisma.candidate.count({ where: { type: "MLA" } });
   const byStateRaw = await prisma.candidate.groupBy({

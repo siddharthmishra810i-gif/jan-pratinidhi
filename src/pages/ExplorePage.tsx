@@ -48,20 +48,21 @@ export function ExplorePage() {
   const allMergedReps = useMemo(() => {
      const dbMlas = dbCandidates.filter(c => c.type === 'MLA');
      const dbLoksabha = dbCandidates.filter(c => c.type === 'Lok Sabha');
+     const dbRajyasabha = dbCandidates.filter(c => c.type === 'Rajya Sabha');
      
      // Merge database and offline fallback representatives beautifully
      const mlasToUse = dbMlas.length > 0 ? dbMlas : [];
      const lsToUse = dbLoksabha.length > 0 ? dbLoksabha : representativesData;
-     const rsToUse = rajyaSabhaData;
+     const rsToUse = dbRajyasabha.length > 0 ? dbRajyasabha : rajyaSabhaData;
 
      const combined = [...mlasToUse, ...lsToUse, ...rsToUse];
      const unique = new Map();
      
      combined.forEach(rep => {
          let type = rep.type;
-         if (type === 'MP' || type === 'Lok Sabha' || (!type && rep.constituency && !rep.constituency.toLowerCase().includes("rajya"))) {
+         if (type === 'MP_LS' || type === 'MP' || type === 'Lok Sabha' || (!type && rep.constituency && !rep.constituency.toLowerCase().includes("rajya"))) {
             type = 'Lok Sabha';
-         } else if (type === 'Rajya Sabha' || (!type && !rep.constituency)) {
+         } else if (type === 'MP_RS' || type === 'Rajya Sabha' || (!type && !rep.constituency)) {
             type = 'Rajya Sabha';
          } else if (type === 'MLA') {
             type = 'MLA';

@@ -30,13 +30,14 @@ model Election {
 model Constituency {
   id             String         @id @default(uuid())
   name           String
+  type           String         @default("MLA")
   stateId        String
   state          State          @relation(fields: [stateId], references: [id])
   candidates     Candidate[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  @@unique([name, stateId])
+  @@unique([name, stateId, type])
 }
 
 model Candidate {
@@ -60,6 +61,9 @@ model Candidate {
   
   attendance         Float?
   questionsAsked     Int?
+  debates            Int?
+  pvtMemberBills     Int?
+  profileUrl         String?
   
   totalAssets        Float?
   totalLiabilities   Float?
@@ -84,7 +88,7 @@ model Candidate {
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
-  @@unique([name, constituencyId])
+  @@unique([name, constituencyId, type])
 }
 
 model Assets {

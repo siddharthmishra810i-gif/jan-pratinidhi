@@ -57,14 +57,14 @@ export function RepresentativeProfilePage() {
       return `₹${val.toLocaleString()}`;
   };
 
-  const repData = isDbRep ? {
+  const repData: any = isDbRep ? {
       name: safeName,
       party: dbRep.party,
       constituency: dbRep.constituency?.name || '',
       state: dbRep.state?.name || '',
-      status: dbRep.type || 'MLA',
+      status: dbRep.type === 'MP_LS' ? 'Lok Sabha' : dbRep.type === 'MP_RS' ? 'Rajya Sabha' : dbRep.type || 'MLA',
       terms: 1,
-      type: dbRep.type || 'MLA',
+      type: dbRep.type === 'MP_LS' ? 'Lok Sabha' : dbRep.type === 'MP_RS' ? 'Rajya Sabha' : dbRep.type || 'MLA',
       criminalCasesCount: dbRep.criminalCasesCount,
       totalAssets: dbRep.totalAssets,
       totalLiabilities: dbRep.totalLiabilities,
@@ -75,18 +75,19 @@ export function RepresentativeProfilePage() {
   } : representative;
 
   const addressInfo = representative ? getAddressForMP(representative.name) : {
-      email: '', permanentAddress: '', delhiAddress: ''
+      email: dbRep?.email || '', permanentAddress: dbRep?.address || '', delhiAddress: ''
   };
   const affidavitData = representative ? getAffidavitData(representative.id, representative.name) : {
-      gender: 'N/A', age: 'N/A', guardianName: 'N/A', maritalStatus: 'N/A', 
-      childrenDetails: 'N/A', phone: 'N/A', address: 'N/A',
+      gender: dbRep?.gender || 'N/A', age: dbRep?.age ? `${dbRep.age} Years` : 'N/A', guardianName: dbRep?.fatherName || 'N/A', maritalStatus: 'N/A', 
+      childrenDetails: dbRep?.childrenInfo || 'N/A', phone: dbRep?.mobileNumber || 'N/A', address: dbRep?.address || 'N/A',
       criminalCases: dbRep?.criminalCasesCount || 0,
       totalAssets: formatCurrency(dbRep?.totalAssets || 0),
       liabilities: formatCurrency(dbRep?.totalLiabilities || 0),
       education: dbRep?.education || 'N/A'
   };
   const attendanceData = representative ? getAttendanceData(representative.id, representative.name) : {
-      percentage: repData?.attendance || 'N/A', daysSigned: 0, totalDays: 0, questionsAsked: repData?.questionsAsked || 0
+      percentage: repData?.attendance || 'N/A', daysSigned: 0, totalDays: 0, questionsAsked: repData?.questionsAsked || 0,
+      debates: dbRep?.debates || 0, pvtMemberBills: dbRep?.pvtMemberBills || 0
   };
   const questions = representative ? getQuestionsForMP(representative.id, representative.name) : [];
 
@@ -158,6 +159,12 @@ export function RepresentativeProfilePage() {
               value={attendanceData.questionsAsked?.toString() || '0'} 
               trend={!isDbRep ? "In 18th Session" : undefined} 
             />
+            {repData.type !== 'MLA' && (
+              <>
+                 <GlassStatisticCard label="Debates Participated" value={attendanceData.debates?.toString() || '0'} />
+                 <GlassStatisticCard label="Private Member Bills" value={attendanceData.pvtMemberBills?.toString() || '0'} />
+              </>
+            )}
             <GlassStatisticCard label={`${repData.type} Terms`} value={repData.terms} />
             <GlassStatisticCard label="Constituency" value={repData.constituency} />
           </div>

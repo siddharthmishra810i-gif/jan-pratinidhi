@@ -129,7 +129,18 @@ export function StateAnalyticsPage() {
 
     const offlineReps = allRepresentatives.filter(rep => rep.state === selectedState && rep.type !== 'MLA');
     
-    return [...dbReps, ...offlineReps];
+    const combined = [...dbReps, ...offlineReps];
+    const unique = new Map();
+    combined.forEach(rep => {
+       const key = rep.name.toLowerCase().trim() + '-' + rep.type;
+       if (!unique.has(key)) {
+          unique.set(key, rep);
+       } else if (rep.isDbRecord) {
+          unique.set(key, rep);
+       }
+    });
+
+    return Array.from(unique.values());
   }, [selectedState, stateInfoFromDb]);
 
   const partyDominance = useMemo(() => {
@@ -376,7 +387,7 @@ export function StateAnalyticsPage() {
                   party={rep.party}
                   constituency={rep.constituency}
                   image={rep.imageUrl || rep.image}
-                  type={rep.type}
+                  type={rep.type === 'MP_LS' ? 'Lok Sabha' : rep.type === 'MP_RS' ? 'Rajya Sabha' : rep.type}
                   attendance={rep.attendance}
                   questionsAsked={rep.questionsAsked}
                 />

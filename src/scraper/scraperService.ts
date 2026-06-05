@@ -141,12 +141,12 @@ export class ScraperService {
       });
 
       if (!electionRecord) return;
-
+      
       const rows: any[] = [];
-      candidateTables.forEach(tbl => {
-          rows.push(...$w(tbl).find('tr').toArray());
-      });
+      candidateTables.forEach(t => rows.push(...$w(t).find('tr').toArray()));
+
       let parsedCount = 0;
+      const candidatesToUpsert: any[] = [];
       for (const row of rows) {
           const cols = $w(row).find('td');
           if (cols.length >= 6) { // Changed: sometimes they have 6 columns
@@ -154,6 +154,12 @@ export class ScraperService {
               if (isNaN(parseInt(sNoRaw, 10))) continue; // Changed: skip rows that aren't numeric serial numbers
               
               const nameRaw = $w(cols[1]).text().trim();
+              const profileLink = $w(cols[1]).find('a').attr('href');
+              let profileUrl = null;
+              if (profileLink) {
+                 const urlObj = new URL(stateUrl);
+                 profileUrl = `${urlObj.origin}${urlObj.pathname.substring(0, urlObj.pathname.lastIndexOf('/'))}/${profileLink}`;
+              }
               const constituencyStr = $w(cols[2]).text().trim();
               const partyStr = $w(cols[3]).text().trim();
               const criminalRaw = parseInt($w(cols[4]).text().trim(), 10) || 0;
@@ -166,52 +172,57 @@ export class ScraperService {
               const name = nameRaw.split('~')[0].trim();
 
               const constituencyRecord = await prisma.constituency.upsert({
-                  where: { name_stateId: { name: constituencyStr, stateId: stateRecord.id } },
+                  where: { name_stateId_type: { name: constituencyStr, stateId: stateRecord.id, type: "MLA" } },
                   update: {},
-                  create: { name: constituencyStr, stateId: stateRecord.id }
+                  create: { name: constituencyStr, stateId: stateRecord.id, type: "MLA" }
               });
 
               if (!constituencyRecord) continue;
 
-              try {
-                  await prisma.candidate.upsert({
-                      where: { name_constituencyId: { name, constituencyId: constituencyRecord.id } },
-                      update: {
-                          party: partyStr,
-                          winner: true,
-                          education: educationStr,
-                          criminalCasesCount: criminalRaw,
-                          totalAssets: assetsStr,
-                          totalLiabilities: liabilitiesStr
-                      },
-                      create: {
-                          name,
-                          stateId: stateRecord.id,
-                          electionId: electionRecord.id,
-                          constituencyId: constituencyRecord.id,
-                          party: partyStr,
-                          winner: true,
-                          type: "MLA",
-                          education: educationStr,
-                          criminalCasesCount: criminalRaw,
-                          totalAssets: assetsStr,
-                          totalLiabilities: liabilitiesStr
-                      }
-                  });
-              } catch (upsertError: any) {
-                  // Explicit validation logging for duplicate key errors 
-                  logger.warn(`[Validation Warning] Duplicate key / upsert failure for ${name} in ${constituencyStr}: ${upsertError.message}`);
-              }
+              candidatesToUpsert.push({
+                 name, constituencyId: constituencyRecord.id, partyStr, educationStr, criminalRaw, assetsStr, liabilitiesStr, profileUrl, constituencyStr
+              });
               
-              this.totalScraped++;
               parsedCount++;
+              this.totalScraped++;
               if (this.totalScraped % 100 === 0) {
                  logger.info(`[Progress] Processed ${this.totalScraped} representative profiles overall...`);
               }
-              // Throtte to prevent network timeouts for future links if we fetch candidate pages.
-              await new Promise(r => setTimeout(r, 10)); // Changed: reduce throttle since we are just doing DB upserts
           }
       }
+
+      await Promise.all(candidatesToUpsert.map(async (c: any) => {
+         try {
+             await prisma.candidate.upsert({
+                where: { name_constituencyId_type: { name: c.name, constituencyId: c.constituencyId, type: "MLA" } },
+                update: {
+                    party: c.partyStr,
+                    winner: true,
+                    education: c.educationStr,
+                    criminalCasesCount: c.criminalRaw,
+                    totalAssets: c.assetsStr,
+                    totalLiabilities: c.liabilitiesStr,
+                    profileUrl: c.profileUrl
+                },
+                create: {
+                    name: c.name,
+                    stateId: stateRecord.id,
+                    electionId: electionRecord.id,
+                    constituencyId: c.constituencyId,
+                    party: c.partyStr,
+                    winner: true,
+                    type: "MLA",
+                    education: c.educationStr,
+                    criminalCasesCount: c.criminalRaw,
+                    totalAssets: c.assetsStr,
+                    totalLiabilities: c.liabilitiesStr,
+                    profileUrl: c.profileUrl
+                }
+             });
+         } catch (upsertError: any) {
+             logger.warn(`[Validation Warning] Duplicate key / upsert failure for ${c.name} in ${c.constituencyStr}: ${upsertError.message}`);
+         }
+      }));
 
       logger.info(`✅ Successfully scraped ${parsedCount} winners for ${cleanStateName} (found ${rows.length} rows originally)`);
 
